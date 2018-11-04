@@ -1,3 +1,5 @@
+import { debug } from "util";
+
 /**
  * abstract抽象クラス
  */
@@ -8,11 +10,14 @@ abstract class Human {
     this.resetHnad();
   }
 
+  /** 名前を取得する */
+  public abstract getName(): string;
+
   /** 手札 */
   protected myCards: Array<number>;
 
  /** openの抽象メソッド */
-  public abstract open(): void;
+  public abstract open(): number;
 
   /** カードをセットするabstractメソッド */
   public abstract setCard(arrList: Array<number>): void;
@@ -26,10 +31,20 @@ abstract class Human {
   };
 
   /** 手札を合計するロジック */
-  protected myCardsCalc(): (accumlator: number, currentValue: number) => number {
-    return (accum: number, currentValue: number): number => {
-      return accum + currentValue;
+  protected myCardsCalc() {
+    return (accum, currentValue): number => {
+      return accum + (currentValue < 11 ? currentValue : 10);
     }
+  }
+
+  /** バストしているかチェックする */
+  public checkBust(): boolean { 
+    return this.open() > 21;
+  }
+
+  /** 手札の配列を返す */
+  public getCardList(): Array<number> { 
+    return this.myCards;
   }
 }
 
@@ -46,6 +61,11 @@ class Dealer extends Human {
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13  //ダイヤ
   ];
 
+  /** 名前を取得する */
+  public getName(): string { 
+    return 'ディーラー';
+  }
+
   /** カードをシャッフルする */
   public shuftle(): void { 
     for (let i = this.cards.length - 1; i >= 0; i--) { 
@@ -61,20 +81,22 @@ class Dealer extends Human {
   /** cardsからランダムで2枚のカードをArrayListで返す */
   public deal(): Array<number> { 
     return this.cards.filter((v, i, a) => {
+      if (i > 1) return false;
       //配列の先頭から要素を削除
-      a.pop();
+      a.shift();
       //2枚のカードを配列として返す
-      if (i < 2) return true;
+      return true;
     });
   }
   
   /** cardsからランダムで1枚のカードをArrayListで返す */
   public hit(): Array<number> { 
     return this.cards.filter((v, i, a) => {
+      if (i > 0) return false;
       //配列の先頭から要素を削除
-      a.pop();
+      a.shift();
       //1枚のカードを配列として返す
-      if (i < 1) return true;
+      return true;
     });
   }
 
@@ -85,7 +107,7 @@ class Dealer extends Human {
 
   /** カードをセットする */
   public setCard(arrList: Array<number>) { 
-    this.myCards.concat(arrList);
+    this.myCards = this.myCards.concat(arrList);
   }
 
   /** 手札をリセットする */
@@ -112,9 +134,13 @@ class User extends Human {
     return this.myCards.reduce(this.myCardsCalc());
   }
 
+  /** 名前を取得する */
+  public getName(): string {
+    return 'ユーザー';
+  }
   /** カードをセットする */
   public setCard(arrList: Array<number>) {
-    this.myCards.concat(arrList);
+    this.myCards = this.myCards.concat(arrList);
   }
 
   /** 
@@ -147,7 +173,7 @@ class BlackJack {
   constructor() { 
     this.dealer = new Dealer();
     this.user = new User();
-    this.logger = new Logger();
+    this.logger = new Logger(this.dealer, this.user);
   }
 
   /** ゲームを実行する */
@@ -159,19 +185,25 @@ class BlackJack {
     this.dealer.shuftle();
 
     //カードを配る
-    this.dealCard(this.dealer);
     this.dealCard(this.user);
+    this.dealCard(this.dealer);
+
+    //カードメッセージを表示
+    this.logger.showCardMessage(this.user);
+    this.logger.showCardMessage(this.dealer);
 
     //ゲームを自動実行
     //プレイヤーがカードを引く
-    if (!this.autoExecGame(this.user)) { 
+    if (this.autoExecGame(this.user)) { 
       //プレイヤーがバストした時点でプレイヤーの敗北が決定する
+      this.logger.showJugeMessage(JudgeFlag.DEALER);
       return;
     }
 
     //ディーラーがカードを引く
-    if (!this.autoExecGame(this.dealer)) { 
+    if (this.autoExecGame(this.dealer)) { 
       //ディーラーがバストした時点でプレイヤーの勝利が決定する
+      this.logger.showJugeMessage(JudgeFlag.USER);
       return;
     }
 
@@ -186,7 +218,7 @@ class BlackJack {
   private autoExecGame(human: Human): boolean { 
     //手札の合計が17以上の時はstandする
     if (!human.checkSum()) { 
-      return human.checkSum();
+      return human.checkBust();
     }
 
     //手札の合計が16以下の為、hitする
@@ -219,27 +251,35 @@ class BlackJack {
     
     return userSum > dealerSum ? JudgeFlag.USER : userSum < dealerSum ? JudgeFlag.DEALER : JudgeFlag.DROW;
    }
-
-  /** メッセージを表示する */
-  private showMessage(message: string): void { 
-    console.log(message);
-  }
 }
 
+/** ログの制御 */
 class Logger { 
 
+  /** ディーラー */
+  private dealer: Dealer;
+  /** ユーザー */
+  private user: User;
+
+  /** ディーラーとユーザーを初期化 */
+  constructor(dealer: Dealer, user: User) { 
+    this.dealer = dealer;
+    this.user = user;
+  }
+
+  /** 判定メッセージを表示する */
   public showJugeMessage(judgeFlag: JudgeFlag) { 
     let message: string;
-    let createMessage = (name: string) => `${ name }が勝利しました。`;
+    let createMessage = (human: Human) => `${ human.getName() }が勝利しました。`;
 
     switch (judgeFlag) { 
-      case JudgeFlag.USER:
-        message = createMessage('ユーザー');
+      case JudgeFlag.USER: //ユーザーの勝利
+        message = createMessage(this.user);
         break;
-      case JudgeFlag.DEALER:
-        message = createMessage('ディーラー');
+      case JudgeFlag.DEALER: //ディーラーの勝利
+        message = createMessage(this.dealer);
         break;
-      case JudgeFlag.DROW:
+      case JudgeFlag.DROW: //引き分け
         message = '引き分けです。';
         break;
     }
@@ -247,11 +287,20 @@ class Logger {
     this.showMessage(message);
   }
 
+  /** 手札の情報を表示する */
+  public showCardMessage(human: Human): void { 
+    let message: string = `${ human.getName() }: ${ human.getCardList().toString() }, 合計：${ human.open() }`;
+    this.showMessage(message);
+  }
+
+  /** メッセージをログに出力する */
   private showMessage(message: string) { 
     console.log(message);
   }
 }
 
+//BlackJackインスタンスを生成
 const blackJack = new BlackJack();
 
+//ゲームを始める
 blackJack.execGame();

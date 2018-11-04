@@ -7,6 +7,21 @@
       "type": "npm",
       "script": "watch",
       "problemMatcher": []
+    },
+    {
+      "type": "npm",
+      "script": "build",
+      "problemMatcher": []
+    },
+    {
+      "type": "npm",
+      "script": "prepare",
+      "problemMatcher": []
+    },
+    {
+      "type": "npm",
+      "script": "test",
+      "problemMatcher": []
     }
   ]
 }
