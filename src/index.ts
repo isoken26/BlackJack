@@ -366,5 +366,7 @@ class Logger {
 //BlackJackインスタンスを生成
 const blackJack = new BlackJack();
 
-//ゲームを始める
-blackJack.execGame();
+for (let i = 0; i < 10; i++) { 
+  //ゲームを始める
+  blackJack.execGame();
+}
