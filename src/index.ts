@@ -32,11 +32,9 @@ abstract class Human {
 
   /** 手札を合計するロジック */
   protected myCardsCalc() {
-    return (accum, currentValue, idx): number => {
-      if (idx === 0) {
-        accum = accum < 11 ? accum : 10;
-      }
-      return accum + (currentValue < 11 ? currentValue : 10);
+    return (accum: number, currentValue: number): number => {
+      const value = currentValue < 11 ? currentValue : 10;
+      return accum + value;
     }
   }
 
@@ -107,7 +105,7 @@ class Dealer extends Human {
 
   /** myCardsの合計値を返す */
   public open(): number {
-    return this.myCards.reduce(this.myCardsCalc());
+    return this.myCards.reduce(this.myCardsCalc(), 0);
   }
 
   /** カードをセットする */
@@ -136,7 +134,7 @@ class Dealer extends Human {
 class User extends Human {
   /** myCardsの合計値を返す */
   public open(): number {
-    return this.myCards.reduce(this.myCardsCalc());
+    return this.myCards.reduce(this.myCardsCalc(), 0);
   }
 
   /** 名前を取得する */
@@ -154,7 +152,7 @@ class User extends Human {
    * */
   public checkSum(): boolean {
     //手札の合計が16以下の場合はhit,17以上はstand
-    return this.myCards.reduce(this.myCardsCalc()) < 17;
+    return this.open() < 17;
   }
 }
 
